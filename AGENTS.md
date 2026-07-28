@@ -6,19 +6,19 @@ already wrap all of that correctly (including the iPhone 17 Pro simulator target
 install, and launch). Reaching for raw commands is how you end up fighting Metro hostnames,
 CocoaPods locale errors, and stale dev-server state.
 
-Use pnpm (the `pn` alias works on this machine):
+Use pnpm:
 
 | Task | Command |
 | --- | --- |
-| Install deps (applies the required patch) | `pn install` |
-| Regenerate the native iOS project | `pn build` (`expo prebuild --platform ios --clean`) |
-| Build, install, and run on the simulator | `pn ios` (`expo run:ios --device 'iPhone 17 Pro'`) |
-| Start Metro only | `pn start` |
-| Lint / format | `pn lint` / `pn format` |
+| Install deps (applies the required patch) | `pnpm install` |
+| Regenerate the native iOS project | `pnpm build` (`expo prebuild --platform ios --clean`) |
+| Build, install, and run on the simulator | `pnpm ios` (`expo run:ios --device 'iPhone 17 Pro'`) |
+| Start Metro only | `pnpm start` |
+| Lint / format | `pnpm lint` / `pnpm format` |
 
-`pn ios` is the one you want to see the app running — it builds, installs, starts Metro,
+`pnpm ios` is the one you want to see the app running — it builds, installs, starts Metro,
 and launches, all wired together. If native config changed (new Swift files, entitlements,
-target membership, podspec), run `pn build` first, then `pn ios`.
+target membership, podspec), run `pnpm build` first, then `pnpm ios`.
 
 # Expo HAS CHANGED
 
