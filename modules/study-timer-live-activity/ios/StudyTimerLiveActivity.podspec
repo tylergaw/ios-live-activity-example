@@ -9,6 +9,6 @@ Pod::Spec.new do |s|
   s.source         = { git: '' }
   s.swift_version  = '5.9'
   s.source_files   = '**/*.swift'
-  s.framework      = 'ActivityKit'
+  s.frameworks     = 'ActivityKit', 'AppIntents'
   s.dependency 'ExpoModulesCore'
 end

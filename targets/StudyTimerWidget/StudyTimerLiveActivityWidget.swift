@@ -56,16 +56,26 @@ struct TimerTextView: View {
   let state: StudyTimerAttributes.ContentState
 
   var body: some View {
-    if state.isPaused {
-      Text(formatTime(state.pausedElapsed))
-        .foregroundColor(.orange)
-    } else {
-      Text(
-        timerInterval: state.startDate...Date.distantFuture,
-        countsDown: false
-      )
-      .foregroundColor(.green)
+    Group {
+      if state.isPaused {
+        // Paused is a static value, so format it ourselves — matched to the
+        // `.timer` style below (no zero-padded hours) so the two states look
+        // identical.
+        Text(stopwatchString(state.pausedElapsed))
+          .foregroundColor(.orange)
+      } else {
+        // Count up from startDate with a bounded end. This renders real ticking
+        // digits on the lock screen. (`.timer` style renders as coarse relative
+        // text — "2 minutes" — in this iOS build; `Date.distantFuture` as the
+        // end makes the seconds show as "--".)
+        Text(
+          timerInterval: state.startDate...state.startDate.addingTimeInterval(24 * 60 * 60),
+          countsDown: false
+        )
+        .foregroundColor(.green)
+      }
     }
+    .multilineTextAlignment(.trailing)
   }
 }
 
@@ -140,9 +150,34 @@ struct LockScreenView: View {
 
 // MARK: - Helpers
 
-func formatTime(_ totalSeconds: Int) -> String {
-  let hours = totalSeconds / 3600
-  let minutes = (totalSeconds % 3600) / 60
-  let seconds = totalSeconds % 60
-  return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+/// Formats elapsed seconds to match SwiftUI's `.timer` text style: no
+/// zero-padded hours, hours shown only once the timer passes an hour
+/// (e.g. "0:16", "2:26", "1:02:26"). Used for the paused (static) value so it
+/// matches the running (`.timer`) value exactly.
+func stopwatchString(_ totalSeconds: Int) -> String {
+  let s = max(0, totalSeconds)
+  let hours = s / 3600
+  let minutes = (s % 3600) / 60
+  let seconds = s % 60
+  if hours > 0 {
+    return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+  }
+  return String(format: "%d:%02d", minutes, seconds)
+}
+
+// MARK: - Previews
+
+#Preview("Lock Screen", as: .content, using: StudyTimerAttributes(sessionName: "Chapter 7 Review")) {
+  StudyTimerLiveActivityWidget()
+} contentStates: {
+  StudyTimerAttributes.ContentState(startDate: .now, pausedElapsed: 0, isPaused: false)
+  StudyTimerAttributes.ContentState(startDate: .now.addingTimeInterval(-95), pausedElapsed: 0, isPaused: false)
+  StudyTimerAttributes.ContentState(startDate: .now, pausedElapsed: 100, isPaused: true)
+}
+
+#Preview("Dynamic Island", as: .dynamicIsland(.expanded), using: StudyTimerAttributes(sessionName: "Chapter 5 Review")) {
+  StudyTimerLiveActivityWidget()
+} contentStates: {
+  StudyTimerAttributes.ContentState(startDate: .now.addingTimeInterval(-95), pausedElapsed: 0, isPaused: false)
+  StudyTimerAttributes.ContentState(startDate: .now, pausedElapsed: 100, isPaused: true)
 }
