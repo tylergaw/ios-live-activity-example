@@ -22,9 +22,21 @@ pnpm build
 pnpm ios
 ```
 
-This builds and launches on an iPhone 17 Pro simulator (iOS 26) by default.
+That's the whole thing — `pnpm ios` builds, installs, starts Metro, and launches on an
+iPhone 17 Pro simulator (iOS 26). Use the `package.json` scripts rather than running
+`xcodebuild`, `xcrun simctl`, `pod install`, or `expo start` by hand; the scripts wrap all
+of that and avoid the Metro / CocoaPods / simulator pitfalls that come with the raw commands.
 
-You can also open `ios/StudyTimer.xcworkspace` in Xcode and run the `StudyTimer` scheme directly.
+| Command | What it does |
+| --- | --- |
+| `pnpm install` | Install deps (applies the required `expo-modules-jsi` patch) |
+| `pnpm build` | Regenerate the native iOS project (`expo prebuild --clean`) |
+| `pnpm ios` | Build, install, and run on the simulator |
+| `pnpm start` | Start Metro only |
+
+If you changed native config (Swift files, entitlements, podspec), run `pnpm build` before
+`pnpm ios`. You can also open `ios/StudyTimer.xcworkspace` in Xcode and run the `StudyTimer`
+scheme directly.
 
 Note: Live Activities work in the simulator but Dynamic Island is only visible on devices with Dynamic Island hardware (iPhone 14 Pro and later).
 
