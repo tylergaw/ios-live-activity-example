@@ -57,8 +57,13 @@ struct ResumeTimerIntent: LiveActivityIntent {
       )
       await activity.update(ActivityContent(state: updated, staleDate: nil))
 
+      // Report the running anchor, not a frozen elapsed: the timer keeps
+      // advancing in the Live Activity while the app is backgrounded, so the
+      // app must reconstruct elapsed from startDate (now - startDate), the same
+      // way the widget does. `widgetElapsed` is kept for reference only.
       defaults.set("resume", forKey: "widgetAction")
       defaults.set(elapsed, forKey: "widgetElapsed")
+      defaults.set(startDate.timeIntervalSince1970, forKey: "widgetStartDate")
     }
     return .result()
   }

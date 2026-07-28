@@ -29,6 +29,7 @@ public class StudyTimerLiveActivityModule: Module {
       let defaults = UserDefaults.standard
       defaults.removeObject(forKey: "widgetAction")
       defaults.removeObject(forKey: "widgetElapsed")
+      defaults.removeObject(forKey: "widgetStartDate")
 
       return activity.id
     }
@@ -101,13 +102,17 @@ public class StudyTimerLiveActivityModule: Module {
         return nil
       }
       let elapsed = defaults.integer(forKey: "widgetElapsed")
-      return ["action": action, "elapsed": elapsed]
+      // Epoch seconds. Set on resume so the app can reconstruct live elapsed as
+      // (now - startDate); 0 when unset (pause/stop don't need it).
+      let startDate = defaults.double(forKey: "widgetStartDate")
+      return ["action": action, "elapsed": elapsed, "startDate": startDate]
     }
 
     Function("clearWidgetAction") {
       let defaults = UserDefaults.standard
       defaults.removeObject(forKey: "widgetAction")
       defaults.removeObject(forKey: "widgetElapsed")
+      defaults.removeObject(forKey: "widgetStartDate")
     }
   }
 }
