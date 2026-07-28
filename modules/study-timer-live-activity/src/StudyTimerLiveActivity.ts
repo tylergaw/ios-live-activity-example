@@ -45,6 +45,8 @@ export async function stopAllLiveActivities(): Promise<void> {
 export function getWidgetAction(): {
   action: string;
   elapsed: number;
+  /** Epoch seconds; the running anchor for "resume" (0 for pause/stop). */
+  startDate: number;
 } | null {
   return StudyTimerLiveActivityModule.getWidgetAction();
 }

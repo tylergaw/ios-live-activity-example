@@ -85,9 +85,16 @@ export default function App() {
                 setTimerState("paused");
                 break;
               case "resume":
-                startTimeRef.current = Date.now();
-                pausedElapsedRef.current = widgetAction.elapsed;
-                setElapsedSeconds(widgetAction.elapsed);
+                // Anchor to the Live Activity's startDate (epoch seconds), not
+                // Date.now(). The timer kept running in the widget while the app
+                // was backgrounded, so elapsed must be measured from startDate —
+                // otherwise the app lags the Live Activity by the time between
+                // the resume tap and the app foregrounding.
+                startTimeRef.current = widgetAction.startDate * 1000;
+                pausedElapsedRef.current = 0;
+                setElapsedSeconds(
+                  Math.floor((Date.now() - startTimeRef.current) / 1000),
+                );
                 setTimerState("running");
                 startInterval();
                 break;
