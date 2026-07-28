@@ -15,7 +15,7 @@ A record of building the Study Timer app -- a React Native/Expo iOS app with a L
 
 Created the standard Expo project structure with `app.json`, `App.tsx`, and a local Expo module at `modules/study-timer-live-activity/` to bridge React Native to ActivityKit.
 
-The widget extension lives at `targets/StudyTimerWidget/` and is picked up by `@bacons/apple-targets` during prebuild. The `expo-target.config.js` there configures the target type, deployment target, frameworks, and App Group entitlements.
+The widget extension lives at `targets/StudyTimerWidget/` and is picked up by `@bacons/apple-targets` during prebuild. The `expo-target.config.js` there configures the target type, deployment target, and frameworks.
 
 `StudyTimerAttributes.swift` (the `ActivityAttributes` definition) is duplicated in both the module and widget directories because they compile as separate Xcode targets and can't share source files directly.
 
@@ -68,7 +68,19 @@ Fixed by switching from JS-driven time updates to iOS native `Text(timerInterval
 
 ### 8. Timer showing relative format instead of elapsed time
 
-`Text(date, style: .timer)` uses a relative format like "2 minutes". Switched to `Text(timerInterval: startDate...Date.distantFuture, countsDown: false)` which displays as a running clock (e.g. `4:35`).
+`Text(date, style: .timer)` renders a coarse relative format ("<1 minute", "2 minutes") rather than a per-second clock. Switched to `Text(timerInterval:countsDown:)`, which renders real ticking digits (e.g. `4:35`). The interval end must be a *bounded* date — with `Date.distantFuture` the seconds render as `--`. Now uses `startDate...startDate.addingTimeInterval(24 * 60 * 60)`.
+
+### 9. Lock-screen / Dynamic Island buttons did nothing
+
+The `LiveActivityIntent`s fired their `perform()` but had no effect — the timer never changed and the app never learned about the tap. Root cause: the intents were compiled only into the widget extension target, so iOS ran them in the *extension* process, where `Activity<StudyTimerAttributes>.activities` is always empty (device log: `Invoking PauseTimerIntent.perform()` immediately followed by `Fetched descriptors for content states: []`). A `LiveActivityIntent` only runs in the app process — where the activities are visible — if the intent type is also a member of the app target. Fixed by compiling the intents into the app target too (added to the Expo module's iOS sources) and linking `AppIntents` in the podspec. The widget keeps its own copy for the SwiftUI `Button(intent:)` call sites.
+
+### 10. Dropped the App Group
+
+Once the intents ran in the app process (issue #9), the App Group became unnecessary: the intent and the Expo module share one sandbox, so they communicate through `UserDefaults.standard`. Removing it also cleared a device-signing blocker — the globally-unique App Group ID `group.com.studytimer.app` couldn't be registered under our team ("An Application Group with Identifier ... is not available").
+
+### 11. Device signing: unique bundle identifier
+
+Bundle IDs are globally unique across all Apple accounts, so the placeholder `com.studytimer.app` was renamed to `tech.latchbolt.studytimer.dev` for device builds.
 
 ## Architecture
 
@@ -87,7 +99,7 @@ Fixed by switching from JS-driven time updates to iOS native `Text(timerInterval
 
 **Widget extension** (`targets/StudyTimerWidget/`):
 - `StudyTimerLiveActivityWidget.swift` defines the lock screen and Dynamic Island views
-- `TimerTextView` uses native `Text(timerInterval:)` when running, static `formatTime()` when paused
+- `TimerTextView` uses native `Text(timerInterval:)` (bounded end) when running and a matching static string (`stopwatchString()`) when paused; both are right-aligned so the value sits in the same column across states
 - `TimerButtonsView` renders pause/resume and stop buttons using `Button(intent:)`
 
 ### ContentState design
@@ -100,20 +112,14 @@ struct ContentState: Codable, Hashable {
 }
 ```
 
-When running, `startDate` is set to `Date().addingTimeInterval(-elapsedSeconds)` so that `Text(timerInterval: startDate...Date.distantFuture)` displays the correct elapsed time. When paused, `pausedElapsed` holds the frozen count.
+When running, `startDate` is set to `Date().addingTimeInterval(-elapsedSeconds)` so that `Text(timerInterval: startDate...startDate.addingTimeInterval(24 * 60 * 60))` displays the correct elapsed time. When paused, `pausedElapsed` holds the frozen count.
 
 ### Widget-to-app communication
 
-Interactive buttons on the Live Activity use `LiveActivityIntent` (AppIntents framework). Since intents run in the widget extension process (not the app), state changes are communicated back to the app via App Groups shared `UserDefaults`:
+Interactive buttons on the Live Activity use `LiveActivityIntent` (AppIntents framework). The intents are compiled into **both** the app and widget targets, so iOS runs them in the app's own process — where `Activity.activities` is populated (see issue #9). The intent updates/ends the activity directly and communicates the change back to the JS layer through `UserDefaults.standard` (same sandbox — no App Group needed, see issue #10):
 
-- Intent writes action ("pause", "resume", "stop") and elapsed time to shared defaults
-- When the app foregrounds, `AppState` listener reads the widget action via `getWidgetAction()` and syncs JS state accordingly
-
-### App Group
-
-Both the main app and widget extension share `group.com.studytimer.app`. This is configured in:
-- `app.json` (main app entitlements)
-- `expo-target.config.js` (widget entitlements)
+- Intent writes the action ("pause", "resume", "stop") and elapsed time to `UserDefaults.standard`
+- When the app foregrounds, the `AppState` listener reads it via `getWidgetAction()` and syncs JS state accordingly
 
 ## Current status
 
@@ -123,12 +129,10 @@ Both the main app and widget extension share `group.com.studytimer.app`. This is
 - Live Activity appears on lock screen and Dynamic Island
 - Timer counts up natively via `Text(timerInterval:)` even when app is backgrounded
 - Session name displayed in all views
-- Interactive buttons (pause/resume, stop) rendered on lock screen and Dynamic Island
-- Widget-to-app state sync via shared UserDefaults
+- Interactive pause/resume/stop buttons on the lock screen and Dynamic Island drive the activity and sync back to the app (see issue #9)
+- Widget-to-app state sync via `UserDefaults.standard`
 - Cleanup of zombie activities on app launch
 
-### Known issue: Live Activity UI not refreshing on button tap
+### Known limitation: intermittent `M:--` on the lock screen
 
-The `LiveActivityIntent` buttons on the lock screen and Dynamic Island execute their `perform()` methods (confirmed by UserDefaults being written and the app picking up state changes on foreground). However, the Live Activity UI does not visually update -- the pause button doesn't switch to resume, and the timer doesn't stop counting.
-
-The `activity.update(ActivityContent(...))` call runs but doesn't trigger a visual refresh of the widget views. This is the primary unresolved issue.
+The auto-updating `Text(timerInterval:)` occasionally shows the seconds as `--` for a moment, then corrects itself. This is iOS throttling how often it refreshes the Live Activity timer text while the device is locked -- a platform behavior of the system timer text, not a formatting bug -- and it recovers on the next system refresh (screen wake, interaction, or the next `activity.update()`). It's most visible in the simulator, which is loose about this refresh cadence.
