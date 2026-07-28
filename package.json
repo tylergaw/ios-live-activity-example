@@ -25,7 +25,7 @@
     "build": "expo prebuild --platform ios --clean",
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios --device 'iPhone 17 Pro'",
+    "ios": "expo run:ios --device",
     "web": "expo start --web",
     "lint": "eslint .",
     "format": "prettier --write '**/*.{ts,tsx,js,json}' --ignore-path .gitignore",

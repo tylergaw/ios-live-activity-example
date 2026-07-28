@@ -1,8 +1,6 @@
 import ExpoModulesCore
 import ActivityKit
 
-private let appGroupId = "group.com.studytimer.app"
-
 public class StudyTimerLiveActivityModule: Module {
   public func definition() -> ModuleDefinition {
     Name("StudyTimerLiveActivity")
@@ -28,9 +26,9 @@ public class StudyTimerLiveActivityModule: Module {
       )
 
       // Clear any stale widget actions
-      let defaults = UserDefaults(suiteName: appGroupId)
-      defaults?.removeObject(forKey: "widgetAction")
-      defaults?.removeObject(forKey: "widgetElapsed")
+      let defaults = UserDefaults.standard
+      defaults.removeObject(forKey: "widgetAction")
+      defaults.removeObject(forKey: "widgetElapsed")
 
       return activity.id
     }
@@ -98,18 +96,18 @@ public class StudyTimerLiveActivityModule: Module {
     }
 
     Function("getWidgetAction") { () -> [String: Any]? in
-      let defaults = UserDefaults(suiteName: appGroupId)
-      guard let action = defaults?.string(forKey: "widgetAction") else {
+      let defaults = UserDefaults.standard
+      guard let action = defaults.string(forKey: "widgetAction") else {
         return nil
       }
-      let elapsed = defaults?.integer(forKey: "widgetElapsed") ?? 0
+      let elapsed = defaults.integer(forKey: "widgetElapsed")
       return ["action": action, "elapsed": elapsed]
     }
 
     Function("clearWidgetAction") {
-      let defaults = UserDefaults(suiteName: appGroupId)
-      defaults?.removeObject(forKey: "widgetAction")
-      defaults?.removeObject(forKey: "widgetElapsed")
+      let defaults = UserDefaults.standard
+      defaults.removeObject(forKey: "widgetAction")
+      defaults.removeObject(forKey: "widgetElapsed")
     }
   }
 }

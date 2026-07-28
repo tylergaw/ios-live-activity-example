@@ -1,14 +1,12 @@
 import AppIntents
 import ActivityKit
 
-private let appGroupId = "group.com.studytimer.app"
-
 struct PauseTimerIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Pause Timer"
 
   @MainActor
   func perform() async throws -> some IntentResult {
-    let defaults = UserDefaults(suiteName: appGroupId)
+    let defaults = UserDefaults.standard
     let activities = Activity<StudyTimerAttributes>.activities
 
     for activity in activities where !activity.content.state.isPaused {
@@ -21,9 +19,8 @@ struct PauseTimerIntent: LiveActivityIntent {
       )
       await activity.update(ActivityContent(state: updated, staleDate: nil))
 
-      defaults?.set("pause", forKey: "widgetAction")
-      defaults?.set(elapsed, forKey: "widgetElapsed")
-      defaults?.synchronize()
+      defaults.set("pause", forKey: "widgetAction")
+      defaults.set(elapsed, forKey: "widgetElapsed")
     }
     return .result()
   }
@@ -34,7 +31,7 @@ struct ResumeTimerIntent: LiveActivityIntent {
 
   @MainActor
   func perform() async throws -> some IntentResult {
-    let defaults = UserDefaults(suiteName: appGroupId)
+    let defaults = UserDefaults.standard
     let activities = Activity<StudyTimerAttributes>.activities
 
     for activity in activities where activity.content.state.isPaused {
@@ -47,9 +44,8 @@ struct ResumeTimerIntent: LiveActivityIntent {
       )
       await activity.update(ActivityContent(state: updated, staleDate: nil))
 
-      defaults?.set("resume", forKey: "widgetAction")
-      defaults?.set(elapsed, forKey: "widgetElapsed")
-      defaults?.synchronize()
+      defaults.set("resume", forKey: "widgetAction")
+      defaults.set(elapsed, forKey: "widgetElapsed")
     }
     return .result()
   }
@@ -60,7 +56,7 @@ struct StopTimerIntent: LiveActivityIntent {
 
   @MainActor
   func perform() async throws -> some IntentResult {
-    let defaults = UserDefaults(suiteName: appGroupId)
+    let defaults = UserDefaults.standard
     let finalState = StudyTimerAttributes.ContentState(
       startDate: Date(),
       pausedElapsed: 0,
@@ -74,8 +70,7 @@ struct StopTimerIntent: LiveActivityIntent {
       )
     }
 
-    defaults?.set("stop", forKey: "widgetAction")
-    defaults?.synchronize()
+    defaults.set("stop", forKey: "widgetAction")
     return .result()
   }
 }
