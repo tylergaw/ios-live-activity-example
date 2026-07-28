@@ -1,16 +1,18 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   Text,
   View,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   Platform,
   AppState,
   AppStateStatus,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { palettes, space, radius, font, type Palette } from "./theme";
 import {
   startLiveActivity,
   pauseLiveActivity,
@@ -24,6 +26,13 @@ import {
 type TimerState = "idle" | "running" | "paused";
 
 export default function App() {
+  // `useColorScheme` subscribes to appearance changes and updates live. Its
+  // type also admits "unspecified"/null (the docs note "unspecified" is never
+  // actually returned), so anything that isn't "light" falls back to dark.
+  const scheme = useColorScheme() === "light" ? "light" : "dark";
+  const c = palettes[scheme];
+  const styles = useMemo(() => makeStyles(c), [c]);
+
   const [sessionName, setSessionName] = useState("");
   const [timerState, setTimerState] = useState<TimerState>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -194,7 +203,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <StatusBar style="light" />
+        <StatusBar style="auto" />
 
         <View style={styles.content}>
           {timerState === "idle" ? (
@@ -204,15 +213,21 @@ export default function App() {
               <TextInput
                 style={styles.input}
                 placeholder="Session name (e.g. Chapter 5 Review)"
-                placeholderTextColor="#666"
+                placeholderTextColor={c.textMuted}
                 value={sessionName}
                 onChangeText={setSessionName}
                 returnKeyType="done"
               />
 
-              <TouchableOpacity style={styles.startButton} onPress={startTimer}>
-                <Text style={styles.startButtonText}>Start New Session</Text>
-              </TouchableOpacity>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.startButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={startTimer}
+              >
+                <Text style={styles.startButtonText}>Start</Text>
+              </Pressable>
             </>
           ) : (
             <>
@@ -221,48 +236,66 @@ export default function App() {
               </Text>
 
               <View style={styles.timerContainer}>
-                <View
-                  style={[
-                    styles.progressRing,
-                    {
-                      borderColor:
-                        timerState === "paused" ? "#F59E0B" : "#10B981",
-                    },
-                  ]}
+                <Text
+                  style={styles.timerText}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  maxFontSizeMultiplier={1.4}
                 >
-                  <Text style={styles.timerText}>
-                    {formatTime(elapsedSeconds)}
-                  </Text>
-                </View>
+                  {formatTime(elapsedSeconds)}
+                </Text>
               </View>
 
-              {timerState === "paused" && (
-                <Text style={styles.pausedLabel}>Paused</Text>
-              )}
-
               <View style={styles.controls}>
-                {timerState === "running" ? (
-                  <TouchableOpacity
-                    style={[styles.controlButton, styles.pauseButton]}
-                    onPress={pauseTimer}
-                  >
-                    <Text style={styles.controlButtonText}>Pause</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.controlButton, styles.resumeButton]}
-                    onPress={resumeTimer}
-                  >
-                    <Text style={styles.controlButtonText}>Resume</Text>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  style={[styles.controlButton, styles.stopButton]}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.controlButton,
+                    styles.stopButton,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={stopTimer}
                 >
-                  <Text style={styles.controlButtonText}>Stop</Text>
-                </TouchableOpacity>
+                  <Text
+                    style={[styles.controlButtonText, styles.stopButtonText]}
+                  >
+                    Stop
+                  </Text>
+                </Pressable>
+
+                {timerState === "running" ? (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.controlButton,
+                      styles.pauseButton,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={pauseTimer}
+                  >
+                    <Text
+                      style={[styles.controlButtonText, styles.pauseButtonText]}
+                    >
+                      Pause
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.controlButton,
+                      styles.resumeButton,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={resumeTimer}
+                  >
+                    <Text
+                      style={[
+                        styles.controlButtonText,
+                        styles.resumeButtonText,
+                      ]}
+                    >
+                      Resume
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             </>
           )}
@@ -272,103 +305,101 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0F172A",
-  },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#F8FAFC",
-    marginBottom: 48,
-  },
-  input: {
-    width: "100%",
-    backgroundColor: "#1E293B",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: "#F8FAFC",
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  startButton: {
-    backgroundColor: "#3B82F6",
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    width: "100%",
-    alignItems: "center",
-  },
-  startButtonText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  sessionName: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#F8FAFC",
-    marginBottom: 32,
-    textAlign: "center",
-  },
-  timerContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  progressRing: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 6,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  timerText: {
-    fontSize: 40,
-    fontWeight: "bold",
-    color: "#F8FAFC",
-    fontVariant: ["tabular-nums"],
-  },
-  pausedLabel: {
-    fontSize: 16,
-    color: "#F59E0B",
-    fontWeight: "600",
-    marginBottom: 16,
-  },
-  controls: {
-    flexDirection: "row",
-    gap: 16,
-    marginTop: 32,
-  },
-  controlButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    minWidth: 120,
-    alignItems: "center",
-  },
-  pauseButton: {
-    backgroundColor: "#F59E0B",
-  },
-  resumeButton: {
-    backgroundColor: "#10B981",
-  },
-  stopButton: {
-    backgroundColor: "#EF4444",
-  },
-  controlButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
+const makeStyles = (c: Palette) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    content: {
+      flex: 1,
+      justifyContent: "center",
+      paddingHorizontal: space.lg,
+    },
+    title: {
+      fontSize: font.size.xl,
+      fontWeight: font.weight.light,
+      color: c.text,
+      marginBottom: space.xxl,
+    },
+    input: {
+      width: "100%",
+      borderRadius: radius.md,
+      padding: space.md,
+      fontSize: font.size.sm,
+      color: c.text,
+      marginBottom: space.md,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    startButton: {
+      backgroundColor: c.accent,
+      paddingVertical: space.md,
+      paddingHorizontal: space.xxl,
+      borderRadius: radius.md,
+      width: "100%",
+      alignItems: "center",
+    },
+    startButtonText: {
+      color: c.bg,
+      fontSize: font.size.md,
+      fontWeight: font.weight.semibold,
+    },
+    sessionName: {
+      fontSize: font.size.md,
+      color: c.text,
+      width: "100%",
+    },
+    timerContainer: {
+      marginBottom: space.md,
+      width: "100%",
+    },
+    timerText: {
+      fontSize: font.size.timer,
+      fontWeight: font.weight.light,
+      color: c.text,
+      fontVariant: ["tabular-nums"],
+    },
+    controls: {
+      justifyContent: "space-between",
+      flexDirection: "row",
+      gap: space.md,
+      marginTop: space.xl,
+      width: "100%",
+    },
+    controlButton: {
+      borderRadius: radius.pill,
+      height: 80,
+      width: 80,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    controlButtonText: {
+      fontSize: font.size.sm,
+      fontWeight: font.weight.medium,
+    },
+    stopButton: {
+      backgroundColor: c.button.default.bg,
+    },
+    stopButtonText: {
+      color: c.button.default.text,
+    },
+    pauseButton: {
+      backgroundColor: c.button.pause.bg,
+    },
+    pauseButtonText: {
+      color: c.button.pause.text,
+    },
+    resumeButton: {
+      backgroundColor: c.button.resume.bg,
+    },
+    resumeButtonText: {
+      color: c.button.resume.text,
+    },
+    // Instant press feedback shared by all buttons — replaces
+    // TouchableOpacity's lingering release fade. Applied via Pressable's
+    // `pressed` state, so it flips on/off immediately.
+    pressed: {
+      opacity: 0.6,
+    },
+  });

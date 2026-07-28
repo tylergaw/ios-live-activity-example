@@ -51,7 +51,7 @@ Installed `expo-dev-client@4.0.12` instead of the SDK 57-compatible version. Thi
 
 Three things were missing for Expo to find the local module:
 - A `package.json` in the module directory
-- `autolinking.nativeModulesDir` in `app.json`
+- an `autolinking.nativeModulesDir` entry (see issue #12 for where this belongs)
 - A `.podspec` file
 
 Added all three.
@@ -82,6 +82,16 @@ Once the intents ran in the app process (issue #9), the App Group became unneces
 
 Bundle IDs are globally unique across all Apple accounts, so the placeholder `com.studytimer.app` was renamed to `tech.latchbolt.studytimer.dev` for device builds.
 
+### 12. `autolinking` config in the wrong file
+
+The `autolinking` block lived under `expo` in `app.json`, which produced two schema warnings: *"Property autolinking is not allowed"* and *"File is a directory: ./modules"*. In SDK 57 the autolinking config is read from **`package.json`** (`expo.autolinking.nativeModulesDir`), not the app config. Moved the block to `package.json`; the module still autolinks from `./modules`, and both warnings cleared.
+
+### 13. Light/dark appearance support
+
+The app was locked to dark (`"userInterfaceStyle": "dark"`), which also forces `UIUserInterfaceStyle` in Info.plist and pins `useColorScheme()` to dark forever. Switched to `"automatic"` and drove colors off `useColorScheme()`.
+
+Considered iOS-only `DynamicColorIOS` (resolves per-appearance inside a static `StyleSheet`), but chose the cross-platform `useColorScheme()` path: two palettes in `theme.ts`, selected on render (the RN docs are explicit that the scheme can change at runtime and must not be cached), with styles built via a memoized `makeStyles(palette)` factory. `<StatusBar style="auto" />` so the status bar inverts with the background. The SwiftUI widget adapts on its own via semantic colors (`.primary`) — see Architecture.
+
 ## Architecture
 
 ### How the timer works
@@ -90,6 +100,7 @@ Bundle IDs are globally unique across all Apple accounts, so the placeholder `co
 - Manages timer state: idle, running, paused
 - Tracks elapsed time with `Date.now()` refs and a 1-second `setInterval`
 - Calls native module functions to start/pause/resume/stop the Live Activity
+- Styling comes from lightweight design tokens in `theme.ts` — role-named `light`/`dark` color palettes plus shared `space`/`radius`/`font`. No provider or styling library. The active palette is picked from `useColorScheme()` and fed to a memoized `makeStyles(palette)` factory (see issue #13). Filled buttons use a tinted pattern (pure-hue label on a low-opacity fill of the same hue).
 
 **Native module** (`StudyTimerLiveActivityModule.swift`):
 - Bridges RN to ActivityKit via Expo Modules
@@ -99,8 +110,10 @@ Bundle IDs are globally unique across all Apple accounts, so the placeholder `co
 
 **Widget extension** (`targets/StudyTimerWidget/`):
 - `StudyTimerLiveActivityWidget.swift` defines the lock screen and Dynamic Island views
-- `TimerTextView` uses native `Text(timerInterval:)` (bounded end) when running and a matching static string (`stopwatchString()`) when paused; both are right-aligned so the value sits in the same column across states
-- `TimerButtonsView` renders pause/resume and stop buttons using `Button(intent:)`
+- `TimerTextView` uses native `Text(timerInterval:)` (bounded end) when running and a matching static string (`stopwatchString()`) when paused. The text is neutral (`.primary`) in both states — matching the app, where the timer color doesn't change; running vs. paused is conveyed by the buttons, not the timer color
+- `TimerButtonsView` renders circular, icon-only `Button(intent:)` controls: Stop (`xmark`) then the pause/resume toggle (`pause.fill` / `play.fill`), via `.buttonStyle(.bordered)` + `.buttonBorderShape(.circle)`
+- Layout mirrors the app: session name + timer stacked on the leading side, controls on the trailing side, on both the lock screen and the expanded Dynamic Island. Colors adapt to light/dark through semantic SwiftUI colors (`.primary`) and no hardcoded background tint
+- The expanded Dynamic Island pads its leading/trailing regions off the island's rounded corners; without it, content (session name, buttons) clips against the corners on device (not visible in the Xcode preview)
 
 ### ContentState design
 
@@ -132,6 +145,8 @@ Interactive buttons on the Live Activity use `LiveActivityIntent` (AppIntents fr
 - Interactive pause/resume/stop buttons on the lock screen and Dynamic Island drive the activity and sync back to the app (see issue #9)
 - Widget-to-app state sync via `UserDefaults.standard`
 - Cleanup of zombie activities on app launch
+- Light/dark appearance support across the app (issue #13); the Live Activity adapts via semantic SwiftUI colors
+- Design tokens (`theme.ts`) drive app styling; the Live Activity / Dynamic Island layout mirrors the main screen (circular icon-only controls, name + timer stacked with controls alongside)
 
 ### Known limitation: intermittent `M:--` on the lock screen
 
