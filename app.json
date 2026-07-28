@@ -1,25 +1,25 @@
 {
   "expo": {
-    "name": "study-timer",
+    "name": "Study Timer",
     "slug": "study-timer",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.studytimer.app",
+      "appleTeamId": "LCUXWD3Y8D",
+      "infoPlist": {
+        "NSSupportsLiveActivities": true
       },
-      "predictiveBackGestureEnabled": false
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.studytimer.app"]
+      }
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "plugins": ["@bacons/apple-targets"],
+    "autolinking": {
+      "nativeModulesDir": "./modules"
     }
   }
 }
