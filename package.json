@@ -32,6 +32,11 @@
     "format:check": "prettier --check '**/*.{ts,tsx,js,json}' --ignore-path .gitignore"
   },
   "private": true,
+  "expo": {
+    "autolinking": {
+      "nativeModulesDir": "./modules"
+    }
+  },
   "pnpm": {
     "patchedDependencies": {
       "expo-modules-jsi": "patches/expo-modules-jsi.patch"

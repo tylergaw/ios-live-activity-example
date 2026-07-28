@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "tech.latchbolt.studytimer.dev",
@@ -14,9 +14,8 @@
         "NSSupportsLiveActivities": true
       }
     },
-    "plugins": ["@bacons/apple-targets"],
-    "autolinking": {
-      "nativeModulesDir": "./modules"
-    }
+    "plugins": [
+      "@bacons/apple-targets"
+    ]
   }
 }
